@@ -1,7 +1,7 @@
 import Spacer from "components/layout/Spacer.vue";
 import { jsx } from "features/feature";
 import { createResource, trackBest, trackOOMPS, trackTotal } from "features/resources/resource";
-import type { GenericTree } from "features/trees/tree";
+import type { GenericTree, TreeBranch } from "features/trees/tree";
 import { branchedResetPropagation, createTree } from "features/trees/tree";
 import { globalBus } from "game/events";
 import type { BaseLayer, GenericLayer } from "game/layers";
@@ -13,6 +13,7 @@ import Decimal, { format, formatTime } from "util/bignum";
 import { render } from "util/vue";
 import { computed, toRaw } from "vue";
 import prestige from "./layers/prestige";
+import generator from "./layers/generator"
 
 /**
  * @hidden
@@ -24,7 +25,8 @@ export const main = createLayer("main", function (this: BaseLayer) {
 
     const pointGain = computed(() => {
         // eslint-disable-next-line prefer-const
-        let gain = new Decimal(1);
+        let gain = new Decimal(0)
+        .add(prestige.myModifier.apply(0));
         return gain;
     });
     globalBus.on("update", diff => {
@@ -33,7 +35,7 @@ export const main = createLayer("main", function (this: BaseLayer) {
     const oomps = trackOOMPS(points, pointGain);
 
     const tree = createTree(() => ({
-        nodes: [[prestige.treeNode]],
+        nodes: [[prestige.treeNode], [generator.treeNode]],
         branches: [],
         onReset() {
             points.value = toRaw(this.resettingNode.value) === toRaw(prestige.treeNode) ? 0 : 10;
@@ -80,7 +82,7 @@ export const main = createLayer("main", function (this: BaseLayer) {
 export const getInitialLayers = (
     /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
     player: Partial<Player>
-): Array<GenericLayer> => [main, prestige];
+): Array<GenericLayer> => [main, prestige, generator];
 
 /**
  * A computed ref whose value is true whenever the game is over.

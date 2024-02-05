@@ -19,12 +19,14 @@ import { createCostRequirement} from "game/requirements";
 import { noPersist } from "game/persistence";
 import { createSequentialModifier, createAdditiveModifier } from "game/modifiers";
 import { createLayerTreeNode, createResetButton } from "../common";
+import Decimal, { format, formatWhole } from "util/bignum";
 
-const id = "p";
+const id = "g";
 const layer = createLayer(id, function (this: BaseLayer) {
-    const name = "Prestige";
+    const name = "Generators";
     const color = "#4BDC13";
-    const points = createResource<DecimalSource>(0, "prestige points");
+    const points = createResource<DecimalSource>(0, "generators");
+    const genP = createResource<DecimalSource>(0, "generator power");
 
     const conversion = createCumulativeConversion(() => ({
         formula: x => x.div(10).sqrt(),
@@ -74,12 +76,13 @@ const layer = createLayer(id, function (this: BaseLayer) {
             addend: 1,
             enabled: myUpgrade.bought
         }))
-    ]);
+    ]); 
 
     return {
         name,
         color,
         points,
+        genP,
         myUpgrade,
         myModifier,
         tooltip,
@@ -87,6 +90,7 @@ const layer = createLayer(id, function (this: BaseLayer) {
             <>
                 <MainDisplay resource={points} color={color} />
                 {render(resetButton)}
+                <div> You have {format(genP.value)} generator power, which boosts Point generation by</div>
                 {renderRow(myUpgrade)}
             </>
         )),

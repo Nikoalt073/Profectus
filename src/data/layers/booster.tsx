@@ -3,7 +3,7 @@
  * @hidden
  */
 import { main } from "data/projEntry";
-import { createCumulativeConversion } from "features/conversion";
+import { createCumulativeConversion, setupPassiveGeneration, createIndependentConversion } from "features/conversion";
 import { jsx } from "features/feature";
 import { createHotkey } from "features/hotkey";
 import { createReset } from "features/reset";
@@ -19,13 +19,15 @@ import { createCostRequirement} from "game/requirements";
 import { noPersist } from "game/persistence";
 import { createSequentialModifier, createAdditiveModifier } from "game/modifiers";
 import { createLayerTreeNode, createResetButton } from "../common";
-import { format } from "util/break_eternity";
+import Decimal, { format, formatWhole } from "util/bignum";
+import { globalBus } from "game/events";
 
-const id = "p";
+const id = "b";
 const layer = createLayer(id, function (this: BaseLayer) {
-    const name = "Prestige";
-    const color = "#31aeb0";
-    const points = createResource<DecimalSource>(0, "prestige points");
+    const name = "Boosters";
+    const color = "#6e64c4";
+    const points = createResource<DecimalSource>(0, "boosters");
+    const boostMult = createResource<DecimalSource>(1, "boost multiplier");
 
     const conversion = createCumulativeConversion(() => ({
         formula: x => x.div(10).sqrt(),
@@ -33,6 +35,7 @@ const layer = createLayer(id, function (this: BaseLayer) {
         gainResource: points
     }));
 
+    //setupPassiveGeneration(this, pointBoostConversion)
     const reset = createReset(() => ({
         thingsToReset: (): Record<string, unknown>[] => [layer]
     }));
@@ -54,8 +57,8 @@ const layer = createLayer(id, function (this: BaseLayer) {
     }));
 
     const hotkey = createHotkey(() => ({
-        description: "Reset for prestige points",
-        key: "p",
+        description: "Reset for boosters",
+        key: "b",
         onPress: resetButton.onClick
     }));
 
@@ -70,25 +73,23 @@ const layer = createLayer(id, function (this: BaseLayer) {
         }
     }));
 
-    const myModifier = createSequentialModifier(() => [
-        createAdditiveModifier(() => ({
-            addend: 1,
-            enabled: myUpgrade.bought
-        }))
-    ]); 
+    globalBus.on("update", diff => {
+        
+        boostMult.value = new Decimal(2).pow(Decimal.fromValue(points.value).add(1)).minus(1)
+    });
 
     return {
         name,
         color,
         points,
+        boostMult,
         myUpgrade,
-        myModifier,
         tooltip,
         display: jsx(() => (
             <>
-                <MainDisplay resource={points} color={color} />
+                <MainDisplay resource={points} color={color} extraText={", which are boosting point generation by " + format(boostMult.value) + "x"} />
                 {render(resetButton)}
-                <div>{format(main.points.value)} points</div>
+                
                 {renderRow(myUpgrade)}
             </>
         )),

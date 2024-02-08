@@ -8,8 +8,7 @@
             <div class="main-display">
                 <span v-if="showPrefix">You have </span>
                 <ResourceVue :resource="resource" :color="color || 'white'" />
-                {{ resource.displayName
-                }}<!-- remove whitespace -->
+                {{resource.displayName}}{{extraText}}
                 <span v-if="effectComponent"
                     >, <component :is="effectComponent" ref="effectRef"
                 /></span>
@@ -31,6 +30,7 @@ import { computed, toRefs } from "vue";
 const _props = defineProps<{
     resource: Resource;
     color?: string;
+    extraText?: string;
     classes?: Record<string, boolean>;
     style?: StyleValue;
     effectDisplay?: CoercableComponent;

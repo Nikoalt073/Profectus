@@ -13,6 +13,8 @@
         </template>
         <template v-slot:body="{ shown }">
             <div v-if="shown">
+                <div v-if="description">{{ description }}</div>
+                <br />
                 <div v-if="author">By {{ author }}</div>
                 <div>
                     Made in Profectus, by thepaperpilot with inspiration from Acameada and Jacorb
@@ -70,7 +72,7 @@ import { formatTime } from "util/bignum";
 import { coerceComponent, render } from "util/vue";
 import { computed, ref, toRefs, unref } from "vue";
 
-const { title, logo, author, discordName, discordLink, versionNumber, versionTitle } = projInfo;
+const { title, logo, author, description, discordName, discordLink, versionNumber, versionTitle } = projInfo;
 
 const _props = defineProps<{ changelog: typeof Changelog | null }>();
 const props = toRefs(_props);

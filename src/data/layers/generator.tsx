@@ -3,7 +3,7 @@
  * @hidden
  */
 import { main } from "data/projEntry";
-import { createCumulativeConversion } from "features/conversion";
+import { createCumulativeConversion, setupPassiveGeneration, createIndependentConversion } from "features/conversion";
 import { jsx } from "features/feature";
 import { createHotkey } from "features/hotkey";
 import { createReset } from "features/reset";
@@ -20,13 +20,16 @@ import { noPersist } from "game/persistence";
 import { createSequentialModifier, createAdditiveModifier } from "game/modifiers";
 import { createLayerTreeNode, createResetButton } from "../common";
 import Decimal, { format, formatWhole } from "util/bignum";
+import { globalBus } from "game/events";
 
 const id = "g";
 const layer = createLayer(id, function (this: BaseLayer) {
     const name = "Generators";
-    const color = "#4BDC13";
+    const color = "#a3d9a5";
     const points = createResource<DecimalSource>(0, "generators");
     const genP = createResource<DecimalSource>(0, "generator power");
+    const genB = createResource<DecimalSource>(1, "generator boost");
+    let genPGain: Decimal
 
     const conversion = createCumulativeConversion(() => ({
         formula: x => x.div(10).sqrt(),
@@ -34,6 +37,7 @@ const layer = createLayer(id, function (this: BaseLayer) {
         gainResource: points
     }));
 
+    //setupPassiveGeneration(this, pointBoostConversion)
     const reset = createReset(() => ({
         thingsToReset: (): Record<string, unknown>[] => [layer]
     }));
@@ -55,8 +59,8 @@ const layer = createLayer(id, function (this: BaseLayer) {
     }));
 
     const hotkey = createHotkey(() => ({
-        description: "Reset for prestige points",
-        key: "p",
+        description: "Reset for generators",
+        key: "g",
         onPress: resetButton.onClick
     }));
 
@@ -71,26 +75,25 @@ const layer = createLayer(id, function (this: BaseLayer) {
         }
     }));
 
-    const myModifier = createSequentialModifier(() => [
-        createAdditiveModifier(() => ({
-            addend: 1,
-            enabled: myUpgrade.bought
-        }))
-    ]); 
+    globalBus.on("update", diff => {
+        genPGain = Decimal.fromValue(points.value);
+        genP.value = Decimal.add(genP.value, Decimal.times(genPGain, diff));
+        genB.value = genP.value.sqrt().add(1)
+    });
 
     return {
         name,
         color,
         points,
         genP,
+        genB,
         myUpgrade,
-        myModifier,
         tooltip,
         display: jsx(() => (
             <>
-                <MainDisplay resource={points} color={color} />
+                <MainDisplay resource={points} color={color} extraText={", which are generating " + format(genPGain) + " Generator Power/sec"} />
                 {render(resetButton)}
-                <div> You have {format(genP.value)} generator power, which boosts Point generation by</div>
+                <div> You have {format(genP.value)} generator power, which boosts Point generation by {format(genB.value)}x</div>
                 {renderRow(myUpgrade)}
             </>
         )),

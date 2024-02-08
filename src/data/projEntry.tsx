@@ -2,7 +2,7 @@ import Spacer from "components/layout/Spacer.vue";
 import { jsx } from "features/feature";
 import { createResource, trackBest, trackOOMPS, trackTotal } from "features/resources/resource";
 import type { GenericTree, TreeBranch } from "features/trees/tree";
-import { branchedResetPropagation, createTree } from "features/trees/tree";
+import { defaultResetPropagation, createTree } from "features/trees/tree";
 import { globalBus } from "game/events";
 import type { BaseLayer, GenericLayer } from "game/layers";
 import { createLayer } from "game/layers";
@@ -14,19 +14,22 @@ import { render } from "util/vue";
 import { computed, toRaw } from "vue";
 import prestige from "./layers/prestige";
 import generator from "./layers/generator"
+import booster from "./layers/booster"
 
 /**
  * @hidden
  */
 export const main = createLayer("main", function (this: BaseLayer) {
-    const points = createResource<DecimalSource>(10);
+    const points = createResource<DecimalSource>(10, "points");
     const best = trackBest(points);
     const total = trackTotal(points);
 
     const pointGain = computed(() => {
+        //let baseValue = ((prestige.myUpgrade.bought) ? 1 : 0)
         // eslint-disable-next-line prefer-const
-        let gain = new Decimal(0)
-        .add(prestige.myModifier.apply(0));
+        let gain:Decimal = new Decimal(prestige.myModifier.apply(0))
+        .mul(generator.genB.value)
+        .mul(booster.boostMult.value);
         return gain;
     });
     globalBus.on("update", diff => {
@@ -35,14 +38,27 @@ export const main = createLayer("main", function (this: BaseLayer) {
     const oomps = trackOOMPS(points, pointGain);
 
     const tree = createTree(() => ({
-        nodes: [[prestige.treeNode], [generator.treeNode]],
-        branches: [],
+        nodes: [[prestige.treeNode], [booster.treeNode, generator.treeNode]],
+        branches: [
+            {
+                startNode: prestige.treeNode,
+                endNode: booster.treeNode,
+                stroke: "white",
+                "stroke-width": "15px"
+            },
+            {
+                startNode: prestige.treeNode,
+                endNode: generator.treeNode,
+                stroke: "white",
+                "stroke-width": "15px"
+            },
+        ],
         onReset() {
             points.value = toRaw(this.resettingNode.value) === toRaw(prestige.treeNode) ? 0 : 10;
             best.value = points.value;
             total.value = points.value;
         },
-        resetPropagation: branchedResetPropagation
+        resetPropagation: defaultResetPropagation
     })) as GenericTree;
 
     return {
@@ -82,7 +98,7 @@ export const main = createLayer("main", function (this: BaseLayer) {
 export const getInitialLayers = (
     /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
     player: Partial<Player>
-): Array<GenericLayer> => [main, prestige, generator];
+): Array<GenericLayer> => [main, prestige, booster, generator];
 
 /**
  * A computed ref whose value is true whenever the game is over.
